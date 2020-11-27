@@ -10,6 +10,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
+CURR_DIR = os.path.dirname(__file__)
+
+
 def get_creds():
     """Returns service credentials from oauth2
     Args:
@@ -17,24 +22,25 @@ def get_creds():
     Returns:
     An object representing the authorized service
     """
-    # If modifying these scopes, delete the file token.pickle.
-    scopes = ["https://www.googleapis.com/auth/gmail.compose"]
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists("token.pickle"):
-        with open("token.pickle", "rb") as token:
+    token_path = os.path.join(CURR_DIR, "token.pickle")
+    if os.path.exists(token_path):
+        with open(token_path, "rb") as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", scopes)
+            flow = InstalledAppFlow.from_client_secrets_file(
+                os.path.join(CURR_DIR, "credentials.json"), SCOPES
+            )
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open("token.pickle", "wb") as token:
+        with open(token_path, "wb") as token:
             pickle.dump(creds, token)
 
     return build("gmail", "v1", credentials=creds)
@@ -86,7 +92,8 @@ def send_message(service, user_id, message):
 def main():
     """Reads and sends message from config file"""
     service = get_creds()
-    with open("meta.yml", "r") as stream:
+    meta_path = os.path.join(CURR_DIR, "meta.yml")
+    with open(meta_path, "r") as stream:
         try:
             config = yaml.safe_load(stream)
             msg_data = config["message"]
